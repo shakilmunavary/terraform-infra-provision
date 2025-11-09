@@ -100,15 +100,15 @@ pipeline {
                 ]) {
                     script {
                         aiAnalytics(
-                            tfPlanJson: "${env.WORKDIR}/terraform/tfplan.json",
-                            guardrailsPath: "${env.SHARED_LIB_DIR}/guardrails/guardrails.txt",
-                            htmlTemplatePath: "${env.SHARED_LIB_DIR}/reference_terra_analysis_html.html",
-                            outputHtmlPath: "${env.WORKDIR}/output.html",
-                            payloadPath: "${env.WORKDIR}/payload.json",
-                            azureApiKey: env.AZURE_API_KEY,
-                            azureApiBase: env.AZURE_API_BASE,
-                            deploymentName: env.DEPLOYMENT_NAME,
-                            apiVersion: env.AZURE_API_VERSION
+                            "${env.WORKDIR}/terraform/tfplan.json",
+                            "${env.SHARED_LIB_DIR}/guardrails/guardrails.txt",
+                            "${env.SHARED_LIB_DIR}/reference_terra_analysis_html.html",
+                            "${env.WORKDIR}/output.html",
+                            "${env.WORKDIR}/payload.json",
+                            env.AZURE_API_KEY,
+                            env.AZURE_API_BASE,
+                            env.DEPLOYMENT_NAME,
+                            env.AZURE_API_VERSION
                         )
                     }
                 }
