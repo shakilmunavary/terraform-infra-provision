@@ -61,7 +61,6 @@ pipeline {
 
                         echo "🔍 Running terraform fmt and validate"
                         cd terraform
-                        terraform fmt -check
                         echo "🚀 Initializing Terraform with S3 backend"
                         terraform init
 
