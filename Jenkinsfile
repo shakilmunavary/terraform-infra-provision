@@ -4,9 +4,10 @@ pipeline {
     agent any
 
     environment {
-        TF_BASE_DIR     = "/home/AI-SDP-PLATFORM/terra-analysis"
-        SHARED_LIB_REPO = "https://github.com/shakilmunavary/jenkins-shared-ai-lib.git"
-        SHARED_LIB_DIR  = "jenkins-shared-ai-lib"
+        TF_BASE_DIR       = "/home/AI-SDP-PLATFORM/terra-analysis"
+        SHARED_LIB_REPO   = "https://github.com/shakilmunavary/jenkins-shared-ai-lib.git"
+        SHARED_LIB_DIR    = "jenkins-shared-ai-lib"
+        OPENAI_API_KEY    = credentials('AZURE_API_KEY') // Required for LangChain
     }
 
     stages {
@@ -78,7 +79,6 @@ pipeline {
                         string(credentialsId: 'INFRACOST_APIKEY', variable: 'INFRACOST_API_KEY')
                     ]) {
                         sh """
-                            cd terraform
                             terraform init
                             terraform plan -out=tfplan.binary
                             terraform show -json tfplan.binary > tfplan.raw.json
