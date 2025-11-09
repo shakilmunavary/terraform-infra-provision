@@ -5,7 +5,6 @@ pipeline {
         stage('Initialize') {
             steps {
                 script {
-                    // Dynamically extract repo name from GIT_URL
                     def repoUrl = env.GIT_URL ?: "https://github.com/shakilmunavary/terraform-infra-provision.git"
                     def repoName = repoUrl.tokenize('/').last().replace('.git', '')
                     def workDir = "/home/AI-SDP-PLATFORM/terra-analysis/${repoName}"
@@ -55,8 +54,11 @@ pipeline {
 
         stage('Terraform Init & Plan') {
             steps {
-                dir("${env.WORKDIR}") {
+                withEnv(["TF_WORK_DIR=${env.WORKDIR}"]) {
                     sh """
+                        echo "📂 Moving to Terraform working directory: \$TF_WORK_DIR"
+                        cd \$TF_WORK_DIR
+
                         echo "🔍 Running terraform fmt and validate"
                         terraform fmt -check
                         terraform validate
