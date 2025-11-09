@@ -1,3 +1,5 @@
+@Library('aiLib') _
+
 pipeline {
     agent any
 
@@ -60,13 +62,23 @@ pipeline {
                         cd \$TF_WORK_DIR
 
                         echo "🔍 Running terraform fmt and validate"
-                        cd terraform
+                        terraform fmt -check
+                        terraform validate
+
                         echo "🚀 Initializing Terraform with S3 backend"
                         terraform init
 
                         echo "📦 Running Terraform Plan"
                         terraform plan -out=tfplan.binary
                     """
+                }
+            }
+        }
+
+        stage('AI Analytics on Terraform State') {
+            steps {
+                script {
+                    aiAnalytics("${env.WORKDIR}/terraform.tfstate")
                 }
             }
         }
