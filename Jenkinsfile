@@ -5,12 +5,10 @@ pipeline {
         stage('Initialize') {
             steps {
                 script {
-                    // Dynamically infer repo name from JOB_NAME
                     def repoName = env.JOB_NAME.tokenize('/').last()
                     def repoUrl  = "https://github.com/your-org/${repoName}.git"
                     def workDir  = "/home/AI-SDP-PLATFORM/terra-analysis/${repoName}"
 
-                    // Save for later stages
                     env.REPO_NAME = repoName
                     env.REPO_URL  = repoUrl
                     env.WORKDIR   = workDir
@@ -32,19 +30,24 @@ pipeline {
 
         stage('Download Terraform State File from S3') {
             steps {
-                script {
-                    def s3Key = "${env.REPO_NAME}/${env.REPO_NAME}.state"
-                    def localPath = "${env.WORKDIR}/terraform.tfstate"
+                withCredentials([
+                    string(credentialsId: 'aws-access-key-id', variable: 'AWS_ACCESS_KEY_ID'),
+                    string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY')
+                ]) {
+                    script {
+                        def s3Key = "${env.REPO_NAME}/${env.REPO_NAME}.state"
+                        def localPath = "${env.WORKDIR}/terraform.tfstate"
 
-                    sh """
-                        echo "📥 Checking for tfstate file in S3..."
-                        if aws s3 ls s3://ai-terraform-state-file/${s3Key}; then
-                            aws s3 cp s3://ai-terraform-state-file/${s3Key} ${localPath}
-                            echo "✅ tfstate file downloaded to ${localPath}"
-                        else
-                            echo "⚠️ No tfstate file found in S3. Proceeding without it."
-                        fi
-                    """
+                        sh """
+                            echo "📥 Checking for tfstate file in S3..."
+                            if aws s3 ls s3://ai-terraform-state-file/${s3Key}; then
+                                aws s3 cp s3://ai-terraform-state-file/${s3Key} ${localPath}
+                                echo "✅ tfstate file downloaded to ${localPath}"
+                            else
+                                echo "⚠️ No tfstate file found in S3. Proceeding without it."
+                            fi
+                        """
+                    }
                 }
             }
         }
