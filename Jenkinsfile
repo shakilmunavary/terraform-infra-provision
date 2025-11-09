@@ -128,21 +128,22 @@ pipeline {
             }
         }
 
-        stage('Manual Validation') {
+        stage('Evaluate Guardrail Coverage') {
             steps {
                 script {
-                    def userInput = input(
-                        id: 'userApproval', message: 'Compliance Validation Result',
-                        parameters: [
-                            choice(name: 'Decision', choices: ['Approve', 'Reject'], description: 'Select action based on compliance report')
-                        ]
-                    )
+                    def coverageLine = sh(
+                        script: "grep -i 'Overall Guardrail Coverage' ${env.WORKDIR}/output.html | grep -o '[0-9]\\{1,3\\}%'",
+                        returnStdout: true
+                    ).trim()
 
-                    if (userInput == 'Approve') {
-                        currentBuild.description = "Approved by user"
+                    def coveragePercent = coverageLine.replace('%', '').toInteger()
+                    echo "🔍 Guardrail Coverage Detected: ${coveragePercent}%"
+
+                    if (coveragePercent >= 50) {
+                        currentBuild.description = "Auto-approved (Coverage: ${coveragePercent}%)"
                         env.PIPELINE_DECISION = 'APPROVED'
                     } else {
-                        currentBuild.description = "Rejected by user"
+                        currentBuild.description = "Auto-rejected (Coverage: ${coveragePercent}%)"
                         env.PIPELINE_DECISION = 'REJECTED'
                     }
                 }
