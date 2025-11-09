@@ -5,9 +5,10 @@ pipeline {
         stage('Initialize') {
             steps {
                 script {
-                    def repoName = env.JOB_NAME.tokenize('/').last()
-                    def repoUrl  = "https://github.com/shakilmunavary/${repoName}.git"
-                    def workDir  = "/home/AI-SDP-PLATFORM/terra-analysis/${repoName}"
+                    // Dynamically extract repo name from GIT_URL
+                    def repoUrl = env.GIT_URL ?: "https://github.com/shakilmunavary/terraform-infra-provision.git"
+                    def repoName = repoUrl.tokenize('/').last().replace('.git', '')
+                    def workDir = "/home/AI-SDP-PLATFORM/terra-analysis/${repoName}"
 
                     env.REPO_NAME = repoName
                     env.REPO_URL  = repoUrl
