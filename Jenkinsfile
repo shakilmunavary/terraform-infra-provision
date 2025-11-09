@@ -4,11 +4,9 @@ pipeline {
     agent any
 
     environment {
-        DEPLOYMENT_NAME   = "gpt-4o"
-        AZURE_API_VERSION = "2025-01-01-preview"
-        TF_BASE_DIR       = "/home/AI-SDP-PLATFORM/terra-analysis"
-        SHARED_LIB_REPO   = "https://github.com/shakilmunavary/jenkins-shared-ai-lib.git"
-        SHARED_LIB_DIR    = "jenkins-shared-ai-lib"
+        TF_BASE_DIR     = "/home/AI-SDP-PLATFORM/terra-analysis"
+        SHARED_LIB_REPO = "https://github.com/shakilmunavary/jenkins-shared-ai-lib.git"
+        SHARED_LIB_DIR  = "jenkins-shared-ai-lib"
     }
 
     stages {
@@ -96,7 +94,9 @@ pipeline {
             steps {
                 withCredentials([
                     string(credentialsId: 'AZURE_API_KEY', variable: 'AZURE_API_KEY'),
-                    string(credentialsId: 'AZURE_API_BASE', variable: 'AZURE_API_BASE')
+                    string(credentialsId: 'AZURE_API_BASE', variable: 'AZURE_API_BASE'),
+                    string(credentialsId: 'AZURE_DEPLOYMENT_NAME', variable: 'DEPLOYMENT_NAME'),
+                    string(credentialsId: 'AZURE_API_VERSION', variable: 'AZURE_API_VERSION')
                 ]) {
                     script {
                         aiAnalytics(
@@ -105,10 +105,10 @@ pipeline {
                             "${env.SHARED_LIB_DIR}/reference_terra_analysis_html.html",
                             "${env.WORKDIR}/output.html",
                             "${env.WORKDIR}/payload.json",
-                            env.AZURE_API_KEY,
-                            env.AZURE_API_BASE,
-                            env.DEPLOYMENT_NAME,
-                            env.AZURE_API_VERSION
+                            AZURE_API_KEY,
+                            AZURE_API_BASE,
+                            DEPLOYMENT_NAME,
+                            AZURE_API_VERSION
                         )
                     }
                 }
