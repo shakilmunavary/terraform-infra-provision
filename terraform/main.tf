@@ -1,3 +1,12 @@
+terraform {
+  backend "s3" {
+    bucket         = "ai-terraform-state-file"
+    key            = "terraform-infra-provision/terraform-infra-provision.state"  # Replace with your repo name if different
+    region         = "us-east-1"
+    encrypt        = true
+  }
+}
+
 provider "aws" {
   region = "us-east-1"
 }
@@ -7,8 +16,8 @@ resource "aws_vpc" "main" {
 }
 
 resource "aws_subnet" "public" {
-  vpc_id            = aws_vpc.main.id
-  cidr_block        = "10.0.1.0/24"
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = "10.0.1.0/24"
   map_public_ip_on_launch = true
 }
 
@@ -61,11 +70,11 @@ resource "aws_lb_listener" "http" {
 }
 
 resource "aws_instance" "app_server" {
-  ami             = "ami-0c55b159cbfafe1f0"  # Example AMI, replace with valid ID
-  instance_type   = "t2.micro"
-  subnet_id       = aws_subnet.public.id
+  ami                         = "ami-0c55b159cbfafe1f0"  # Example AMI
+  instance_type               = "t2.micro"
+  subnet_id                   = aws_subnet.public.id
   associate_public_ip_address = false
-  security_groups = [aws_security_group.ec2_sg.id]
+  security_groups             = [aws_security_group.ec2_sg.id]
 
   user_data = <<-EOF
               #!/bin/bash
@@ -79,5 +88,5 @@ resource "aws_instance" "app_server" {
 resource "aws_lb_target_group_attachment" "attach" {
   target_group_arn = aws_lb_target_group.app_tg.arn
   target_id        = aws_instance.app_server.id
-  port            = 80
+  port             = 80
 }
