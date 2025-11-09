@@ -114,7 +114,7 @@ pipeline {
                     script {
                         aiAnalytics(
                             "${env.WORKDIR}/terraform/tfplan.json",
-                            "${env.SHARED_LIB_DIR}/guardrails/guardrails.txt",
+                            "${env.SHARED_LIB_DIR}/guardrails/guardrails_v1.txt",
                             "${env.SHARED_LIB_DIR}/reference_terra_analysis_html.html",
                             "${env.WORKDIR}/output.html",
                             "${env.WORKDIR}/payload.json",
