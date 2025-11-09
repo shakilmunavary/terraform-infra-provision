@@ -107,11 +107,13 @@ pipeline {
             }
         }
 
-        stage('Install Python Dependencies') {
+        stage('Setup Python Virtualenv') {
             steps {
                 sh """
-                    echo "📦 Installing required Python packages"
+                    python3 -m venv venv
+                    source venv/bin/activate
                     pip install --upgrade langchain langchain-community chromadb openai tiktoken
+                    export PYTHONPATH=\$(pwd)/venv/lib/python3.9/site-packages:\$PYTHONPATH
                 """
             }
         }
