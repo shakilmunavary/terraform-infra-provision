@@ -82,6 +82,7 @@ pipeline {
                             terraform init
                             terraform plan -out=tfplan.binary
                             terraform show -json tfplan.binary > tfplan.raw.json
+                            mv tfplan.json ../tfplan.json
 
                             jq '
                               .resource_changes |= sort_by(.address) |
