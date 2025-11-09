@@ -113,7 +113,8 @@ pipeline {
                     python3 -m venv venv
                     source venv/bin/activate
                     pip install --upgrade pip
-                    pip install langchain langchain-community chromadb openai tiktoken
+                    pip install langchain langchain-community langchain-openai chromadb openai tiktoken
+
                 """
             }
         }
