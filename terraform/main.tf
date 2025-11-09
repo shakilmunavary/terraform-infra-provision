@@ -2,7 +2,7 @@ terraform {
   backend "s3" {
     bucket         = "ai-terraform-state-file"
     key            = "terraform-infra-provision/terraform-infra-provision.state"  # Replace with your repo name if different
-    region         = "us-east-1"
+    region         = "us-west-2"
     encrypt        = true
   }
 }
