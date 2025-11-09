@@ -80,7 +80,20 @@ pipeline {
                         sh """
                             terraform init
                             terraform plan -out=tfplan.binary
-                            terraform show -json tfplan.binary > tfplan.json
+                            terraform show -json tfplan.binary > tfplan.raw.json
+
+                            jq '
+                              .resource_changes |= sort_by(.address) |
+                              del(.resource_changes[].change.after_unknown) |
+                              del(.resource_changes[].change.before_sensitive) |
+                              del(.resource_changes[].change.after_sensitive) |
+                              del(.resource_changes[].change.after_identity) |
+                              del(.resource_changes[].change.before) |
+                              del(.resource_changes[].change.after.tags_all) |
+                              del(.resource_changes[].change.after.tags) |
+                              del(.resource_changes[].change.after.id) |
+                              del(.resource_changes[].change.after.arn)
+                            ' tfplan.raw.json > tfplan.json
 
                             infracost configure set api_key \$INFRACOST_API_KEY
                             infracost breakdown --path=tfplan.binary --format json --out-file totalcost.json
