@@ -1,6 +1,6 @@
 pipeline {
     agent any
-
+    
     environment {
         TF_DIR            = "/home/AI-SDP-PLATFORM/terra-analysis/"
         GIT_REPO_NAME     = "terraform-ai-analytics"
@@ -15,8 +15,7 @@ pipeline {
         stage('Clone Repository') {
             steps {
                 sh """
-                    rm -rf $GIT_REPO_NAME
-                    git clone 'https://github.com/shakilmunavary/terraform-ai-analytics.git'
+                    git clone 'https://github.com/shakilmunavary/terraform-infra-provision.git'
                 """
             }
         }
