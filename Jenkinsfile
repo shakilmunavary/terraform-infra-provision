@@ -7,7 +7,7 @@ pipeline {
         TF_BASE_DIR       = "/home/AI-SDP-PLATFORM/terra-analysis"
         SHARED_LIB_REPO   = "https://github.com/shakilmunavary/jenkins-shared-ai-lib.git"
         SHARED_LIB_DIR    = "jenkins-shared-ai-lib"
-        OPENAI_API_KEY    = credentials('AZURE_API_KEY') // Required for LangChain
+        OPENAI_API_KEY    = credentials('AZURE_API_KEY')
     }
 
     stages {
@@ -110,10 +110,11 @@ pipeline {
         stage('Setup Python Virtualenv') {
             steps {
                 sh """
+                    echo "🐍 Setting up Python virtual environment"
                     python3 -m venv venv
                     source venv/bin/activate
-                    pip install --upgrade langchain langchain-community chromadb openai tiktoken
-                    export PYTHONPATH=\$(pwd)/venv/lib/python3.9/site-packages:\$PYTHONPATH
+                    pip install --upgrade pip
+                    pip install langchain langchain-community chromadb openai tiktoken
                 """
             }
         }
@@ -122,6 +123,7 @@ pipeline {
             steps {
                 sh """
                     echo "📦 Indexing Terraform code and guardrails into vector DB"
+                    source venv/bin/activate
                     export OPENAI_API_KEY=${OPENAI_API_KEY}
                     python3 ${SHARED_LIB_DIR}/indexer.py \
                         --code_dir ${WORKDIR} \
@@ -141,7 +143,13 @@ pipeline {
                 ]) {
                     script {
                         def rcaContext = sh(
-                            script: "export OPENAI_API_KEY=${OPENAI_API_KEY} && python3 ${SHARED_LIB_DIR}/query.py --plan ${WORKDIR}/tfplan.json --namespace ${REPO_NAME}-${BUILD_NUMBER}",
+                            script: """
+                                source venv/bin/activate
+                                export OPENAI_API_KEY=${OPENAI_API_KEY}
+                                python3 ${SHARED_LIB_DIR}/query.py \
+                                    --plan ${WORKDIR}/tfplan.json \
+                                    --namespace ${REPO_NAME}-${BUILD_NUMBER}
+                            """,
                             returnStdout: true
                         ).trim()
 
@@ -219,7 +227,7 @@ pipeline {
         stage('Cleanup Vector DB') {
             steps {
                 sh """
-                    echo "🧹 Cleaning up vector DB namespace"
+                    source venv/bin/activate
                     python3 ${SHARED_LIB_DIR}/delete_namespace.py \
                         --namespace ${REPO_NAME}-${BUILD_NUMBER}
                 """
