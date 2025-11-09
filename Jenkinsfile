@@ -60,6 +60,7 @@ pipeline {
                         cd \$TF_WORK_DIR
 
                         echo "🔍 Running terraform fmt and validate"
+                        cd terraform
                         terraform fmt -check
                         terraform validate
 
