@@ -107,10 +107,20 @@ pipeline {
             }
         }
 
+        stage('Install Python Dependencies') {
+            steps {
+                sh """
+                    echo "📦 Installing required Python packages"
+                    pip install --upgrade langchain langchain-community chromadb openai tiktoken
+                """
+            }
+        }
+
         stage('Index to Vector DB') {
             steps {
                 sh """
                     echo "📦 Indexing Terraform code and guardrails into vector DB"
+                    export OPENAI_API_KEY=${OPENAI_API_KEY}
                     python3 ${SHARED_LIB_DIR}/indexer.py \
                         --code_dir ${WORKDIR} \
                         --guardrails ${SHARED_LIB_DIR}/guardrails_v1.txt \
@@ -129,7 +139,7 @@ pipeline {
                 ]) {
                     script {
                         def rcaContext = sh(
-                            script: "python3 ${SHARED_LIB_DIR}/query.py --plan ${WORKDIR}/tfplan.json --namespace ${REPO_NAME}-${BUILD_NUMBER}",
+                            script: "export OPENAI_API_KEY=${OPENAI_API_KEY} && python3 ${SHARED_LIB_DIR}/query.py --plan ${WORKDIR}/tfplan.json --namespace ${REPO_NAME}-${BUILD_NUMBER}",
                             returnStdout: true
                         ).trim()
 
