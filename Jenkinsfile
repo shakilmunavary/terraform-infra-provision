@@ -6,7 +6,7 @@ pipeline {
             steps {
                 script {
                     def repoName = env.JOB_NAME.tokenize('/').last()
-                    def repoUrl  = "https://github.com/your-org/${repoName}.git"
+                    def repoUrl  = "https://github.com/shakilmunavary/${repoName}.git"
                     def workDir  = "/home/AI-SDP-PLATFORM/terra-analysis/${repoName}"
 
                     env.REPO_NAME = repoName
