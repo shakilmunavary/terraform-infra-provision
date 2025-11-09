@@ -79,6 +79,7 @@ pipeline {
                         string(credentialsId: 'INFRACOST_APIKEY', variable: 'INFRACOST_API_KEY')
                     ]) {
                         sh """
+                            cd terraform
                             terraform init
                             terraform plan -out=tfplan.binary
                             terraform show -json tfplan.binary > tfplan.raw.json
