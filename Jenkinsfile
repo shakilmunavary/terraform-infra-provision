@@ -4,10 +4,9 @@ pipeline {
     agent any
 
     environment {
-        TF_BASE_DIR       = "/home/AI-SDP-PLATFORM/terra-analysis"
-        SHARED_LIB_REPO   = "https://github.com/shakilmunavary/jenkins-shared-ai-lib.git"
-        SHARED_LIB_DIR    = "jenkins-shared-ai-lib"
-        OPENAI_API_KEY    = credentials('AZURE_API_KEY')
+        TF_BASE_DIR     = "/home/AI-SDP-PLATFORM/terra-analysis"
+        SHARED_LIB_REPO = "https://github.com/shakilmunavary/jenkins-shared-ai-lib.git"
+        SHARED_LIB_DIR  = "jenkins-shared-ai-lib"
     }
 
     stages {
@@ -121,15 +120,25 @@ pipeline {
 
         stage('Index to Vector DB') {
             steps {
-                sh """
-                    echo "📦 Indexing Terraform code and guardrails into vector DB"
-                    source venv/bin/activate
-                    export OPENAI_API_KEY=${OPENAI_API_KEY}
-                    python3 ${SHARED_LIB_DIR}/indexer.py \
-                        --code_dir ${WORKDIR} \
-                        --guardrails ${SHARED_LIB_DIR}/guardrails_v1.txt \
-                        --namespace ${REPO_NAME}-${BUILD_NUMBER}
-                """
+                withCredentials([
+                    string(credentialsId: 'AZURE_API_KEY', variable: 'AZURE_API_KEY'),
+                    string(credentialsId: 'AZURE_API_BASE', variable: 'AZURE_API_BASE'),
+                    string(credentialsId: 'AZURE_DEPLOYMENT_NAME', variable: 'DEPLOYMENT_NAME'),
+                    string(credentialsId: 'AZURE_API_VERSION', variable: 'AZURE_API_VERSION')
+                ]) {
+                    sh """
+                        echo "📦 Indexing Terraform code and guardrails into vector DB"
+                        source venv/bin/activate
+                        export AZURE_API_KEY=${AZURE_API_KEY}
+                        export AZURE_API_BASE=${AZURE_API_BASE}
+                        export DEPLOYMENT_NAME=${DEPLOYMENT_NAME}
+                        export AZURE_API_VERSION=${AZURE_API_VERSION}
+                        python3 ${SHARED_LIB_DIR}/indexer.py \
+                            --code_dir ${WORKDIR} \
+                            --guardrails ${SHARED_LIB_DIR}/guardrails_v1.txt \
+                            --namespace ${REPO_NAME}-${BUILD_NUMBER}
+                    """
+                }
             }
         }
 
@@ -145,7 +154,10 @@ pipeline {
                         def rcaContext = sh(
                             script: """
                                 source venv/bin/activate
-                                export OPENAI_API_KEY=${OPENAI_API_KEY}
+                                export AZURE_API_KEY=${AZURE_API_KEY}
+                                export AZURE_API_BASE=${AZURE_API_BASE}
+                                export DEPLOYMENT_NAME=${DEPLOYMENT_NAME}
+                                export AZURE_API_VERSION=${AZURE_API_VERSION}
                                 python3 ${SHARED_LIB_DIR}/query.py \
                                     --plan ${WORKDIR}/tfplan.json \
                                     --namespace ${REPO_NAME}-${BUILD_NUMBER}
