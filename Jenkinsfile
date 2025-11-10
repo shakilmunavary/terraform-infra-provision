@@ -96,8 +96,8 @@ pipeline {
         stage('Evaluate Guardrail Coverage') {
             steps {
                 script {
-                    def passCount = sh(script: "grep -o 'class=\"pass\"' terraform-infra-provision/terraform/output.html | wc -l", returnStdout: true).trim().toInteger()
-                    def failCount = sh(script: "grep -o 'class=\"fail\"' terraform-infra-provision/terraform/output.html | wc -l", returnStdout: true).trim().toInteger()
+                    def passCount = sh(script: "grep -oi 'class=\"pass\"' terraform-infra-provision/terraform/output.html | wc -l", returnStdout: true).trim().toInteger()
+                    def failCount = sh(script: "grep -oi 'class=\"fail\"' terraform-infra-provision/terraform/output.html | wc -l", returnStdout: true).trim().toInteger()
                     def coverage = passCount + failCount > 0 ? (passCount * 100 / (passCount + failCount)).toInteger() : 0
 
                     echo "🔍 Guardrail Coverage: ${coverage}%"
