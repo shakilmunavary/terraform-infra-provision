@@ -71,40 +71,44 @@ pipeline {
             }
         }
 
+        stage('Fix Workspace Ownership') {
+            steps {
+                sh """
+                    echo "🔧 Ensuring Jenkins owns the workspace"
+                    sudo chown -R jenkins:jenkins ${env.WORKDIR}/terraform || true
+                """
+            }
+        }
+
         stage('Terraform Init & Plan') {
-            agent {
-                docker {
-                    image 'hashicorp/terraform:1.5.7'
-                    args '-u root'
-                }
-            }
-            environment {
-                INFRACOST_API_KEY = credentials('INFRACOST_APIKEY')
-            }
             steps {
                 dir("${env.WORKDIR}/terraform") {
-                    sh """
-                        echo "🚀 Running terraform init and plan in Docker"
-                        terraform init
-                        terraform plan -out=tfplan.binary
-                        terraform show -json tfplan.binary > tfplan.raw.json
+                    withCredentials([
+                        string(credentialsId: 'INFRACOST_APIKEY', variable: 'INFRACOST_API_KEY')
+                    ]) {
+                        sh """
+                            echo "🚀 Running terraform init and plan"
+                            terraform init
+                            terraform plan -out=tfplan.binary
+                            terraform show -json tfplan.binary > tfplan.raw.json
 
-                        jq '
-                          .resource_changes |= sort_by(.address) |
-                          del(.resource_changes[].change.after_unknown) |
-                          del(.resource_changes[].change.before_sensitive) |
-                          del(.resource_changes[].change.after_sensitive) |
-                          del(.resource_changes[].change.after_identity) |
-                          del(.resource_changes[].change.before) |
-                          del(.resource_changes[].change.after.tags_all) |
-                          del(.resource_changes[].change.after.tags) |
-                          del(.resource_changes[].change.after.id) |
-                          del(.resource_changes[].change.after.arn)
-                        ' tfplan.raw.json > tfplan.json
+                            jq '
+                              .resource_changes |= sort_by(.address) |
+                              del(.resource_changes[].change.after_unknown) |
+                              del(.resource_changes[].change.before_sensitive) |
+                              del(.resource_changes[].change.after_sensitive) |
+                              del(.resource_changes[].change.after_identity) |
+                              del(.resource_changes[].change.before) |
+                              del(.resource_changes[].change.after.tags_all) |
+                              del(.resource_changes[].change.after.tags) |
+                              del(.resource_changes[].change.after.id) |
+                              del(.resource_changes[].change.after.arn)
+                            ' tfplan.raw.json > tfplan.json
 
-                        infracost configure set api_key \$INFRACOST_API_KEY
-                        infracost breakdown --path=tfplan.binary --format json --out-file totalcost.json
-                    """
+                            infracost configure set api_key \$INFRACOST_API_KEY
+                            infracost breakdown --path=tfplan.binary --format json --out-file totalcost.json
+                        """
+                    }
                 }
             }
         }
