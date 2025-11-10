@@ -5,8 +5,8 @@ pipeline {
 
     environment {
         WORKDIR = "${env.WORKSPACE}"
-        SHARED_LIB_DIR = "${WORKDIR}/jenkins-shared-ai-lib"
         REPO_NAME = "terraform-infra-provision"
+        SHARED_LIB_NAME = "jenkins-shared-ai-lib"
     }
 
     options {
@@ -48,7 +48,7 @@ pipeline {
                 ]) {
                     aiAnalytics(
                         workdir: "${WORKDIR}",
-                        sharedLibDir: "${SHARED_LIB_DIR}",
+                        sharedLibName: "${SHARED_LIB_NAME}",
                         repoName: "${REPO_NAME}",
                         buildNumber: "${BUILD_NUMBER}"
                     )
@@ -101,7 +101,7 @@ pipeline {
             steps {
                 sh """
                     . venv/bin/activate
-                    python3 ${SHARED_LIB_DIR}/delete_namespace.py \
+                    python3 ${WORKDIR}/delete_namespace.py \
                       --namespace ${REPO_NAME}-${BUILD_NUMBER}
                 """
             }
