@@ -67,17 +67,18 @@ module "app_server" {
               EOF
 }
 
-# Application Load Balancer
 module "app_lb" {
   source  = "terraform-aws-modules/alb/aws"
-  name    = "app-load-balancer"
-  load_balancer_type = "application"
-  internal = false
-  subnets = module.vpc.public_subnets
-  security_groups = [module.alb_sg.security_group_id]
+  version = "~> 10.2.0"
 
-  target_groups = [
-    {
+  name               = "app-load-balancer"
+  load_balancer_type = "application"
+  internal           = false
+  subnets            = module.vpc.public_subnets
+  security_groups    = [module.alb_sg.security_group_id]
+
+  target_groups = {
+    app_tg = {
       name_prefix      = "app-tg"
       backend_protocol = "HTTP"
       backend_port     = 80
@@ -89,16 +90,16 @@ module "app_lb" {
         }
       ]
     }
-  ]
+  }
 
-  listeners = [
-    {
+  listeners = {
+    http = {
       port     = 80
       protocol = "HTTP"
       default_action = {
-        type             = "forward"
+        type               = "forward"
         target_group_index = 0
       }
     }
-  ]
+  }
 }
