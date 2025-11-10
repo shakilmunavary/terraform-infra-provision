@@ -31,6 +31,8 @@ module "vpc" {
 # Security Group for ALB
 module "alb_sg" {
   source  = "terraform-aws-modules/security-group/aws"
+  version = "~> 5.3.0"
+
   name    = "alb-sg"
   vpc_id  = module.vpc.vpc_id
 
@@ -41,6 +43,8 @@ module "alb_sg" {
 # Security Group for EC2
 module "ec2_sg" {
   source  = "terraform-aws-modules/security-group/aws"
+  version = "~> 5.3.0"
+
   name    = "ec2-sg"
   vpc_id  = module.vpc.vpc_id
 
@@ -51,12 +55,14 @@ module "ec2_sg" {
 # EC2 Instance
 module "app_server" {
   source  = "terraform-aws-modules/ec2-instance/aws"
-  name    = "app-server"
-  ami     = "ami-0c55b159cbfafe1f0"
-  instance_type = "t2.micro"
-  subnet_id     = module.vpc.public_subnets[0]
+  version = "~> 6.1.0"
+
+  name                        = "app-server"
+  ami                         = "ami-0c55b159cbfafe1f0"
+  instance_type               = "t2.micro"
+  subnet_id                   = module.vpc.public_subnets[0]
   associate_public_ip_address = false
-  vpc_security_group_ids = [module.ec2_sg.security_group_id]
+  vpc_security_group_ids      = [module.ec2_sg.security_group_id]
 
   user_data = <<-EOF
               #!/bin/bash
@@ -67,6 +73,7 @@ module "app_server" {
               EOF
 }
 
+# Application Load Balancer
 module "app_lb" {
   source  = "terraform-aws-modules/alb/aws"
   version = "~> 10.2.0"
@@ -84,12 +91,12 @@ module "app_lb" {
       backend_port     = 80
       target_type      = "instance"
       vpc_id           = module.vpc.vpc_id
-      targets = [
-        {
+      targets = {
+        app_server = {
           target_id = module.app_server.id
           port      = 80
         }
-      ]
+      }
     }
   }
 
@@ -97,10 +104,10 @@ module "app_lb" {
     http = {
       port     = 80
       protocol = "HTTP"
-      default_action = {
-        type               = "forward"
-        target_group_index = 0
-      }
+      default_action = [{
+        type             = "forward"
+        target_group_key = "app_tg"
+      }]
     }
   }
 }
