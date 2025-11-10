@@ -78,6 +78,11 @@ pipeline {
                         string(credentialsId: 'INFRACOST_APIKEY', variable: 'INFRACOST_API_KEY')
                     ]) {
                         sh """
+                            echo "🧹 Cleaning Terraform workspace"
+                            rm -rf .terraform
+                            chmod -R 775 .
+
+                            echo "🚀 Running terraform init and plan"
                             terraform init
                             terraform plan -out=tfplan.binary
                             terraform show -json tfplan.binary > tfplan.raw.json
@@ -144,13 +149,22 @@ pipeline {
         stage('Evaluate Guardrail Coverage') {
             steps {
                 script {
-                    def coverageLine = sh(
-                        script: "grep -i 'Overall Guardrail Coverage' ${env.WORKDIR}/output.html | grep -o '[0-9]\\{1,3\\}%'",
+                    def passCount = sh(
+                        script: "grep -o 'class=\"pass\"' ${env.WORKDIR}/output.html | wc -l",
                         returnStdout: true
-                    ).trim()
+                    ).trim().toInteger()
 
-                    def coveragePercent = coverageLine.replace('%', '').toInteger()
+                    def failCount = sh(
+                        script: "grep -o 'class=\"fail\"' ${env.WORKDIR}/output.html | wc -l",
+                        returnStdout: true
+                    ).trim().toInteger()
+
+                    def totalCount = passCount + failCount
+                    def coveragePercent = totalCount > 0 ? (passCount * 100 / totalCount).toInteger() : 0
+
                     echo "🔍 Guardrail Coverage Detected: ${coveragePercent}%"
+
+                    sh "sed -i 's/Overall Guardrail Coverage: .*/Overall Guardrail Coverage: ${coveragePercent}%/' ${env.WORKDIR}/output.html"
 
                     if (coveragePercent >= 50) {
                         currentBuild.description = "Auto-approved (Coverage: ${coveragePercent}%)"
