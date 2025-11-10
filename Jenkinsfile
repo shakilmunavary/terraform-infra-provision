@@ -46,12 +46,6 @@ pipeline {
                     string(credentialsId: 'AZURE_API_KEY', variable: 'AZURE_API_KEY'),
                     string(credentialsId: 'AZURE_API_BASE', variable: 'AZURE_API_BASE')
                 ]) {
-                    sh """
-                        echo '🔥 Purging stale Python caches'
-                        echo '🔍 Verifying active indexer.py version'
-                        head -n 5 ${SHARED_LIB_DIR}/indexer.py
-                    """
-
                     aiAnalytics(
                         workdir: "${WORKDIR}",
                         sharedLibDir: "${SHARED_LIB_DIR}",
