@@ -27,8 +27,8 @@ pipeline {
         stage("AI Analytics") {
             steps {
                 withCredentials([
-                    string(credentialsId: 'azure-api-key', variable: 'AZURE_API_KEY'),
-                    string(credentialsId: 'azure-api-base', variable: 'AZURE_API_BASE')
+                    string(credentialsId: 'AZURE_API_KEY', variable: 'AZURE_API_KEY'),
+                    string(credentialsId: 'AZURE_API_BASE', variable: 'AZURE_API_BASE')
                 ]) {
                     aiAnalytics(
                         workdir: "${WORKDIR}",
