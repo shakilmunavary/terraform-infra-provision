@@ -48,9 +48,6 @@ pipeline {
                 ]) {
                     sh """
                         echo '🔥 Purging stale Python caches'
-                        find ${SHARED_LIB_DIR} -name '*.pyc' -delete
-                        find ${SHARED_LIB_DIR} -name '__pycache__' -type d -exec rm -rf {} +
-
                         echo '🔍 Verifying active indexer.py version'
                         head -n 5 ${SHARED_LIB_DIR}/indexer.py
                     """
