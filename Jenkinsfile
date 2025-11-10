@@ -23,25 +23,6 @@ pipeline {
             }
         }
 
-        stage('Download tfstate from S3') {
-            steps {
-                withCredentials([
-                    string(credentialsId: 'aws-access-key-id', variable: 'AWS_ACCESS_KEY_ID'),
-                    string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY')
-                ]) {
-                    sh """
-                        echo "📥 Checking for tfstate file in S3..."
-                        if aws s3 ls s3://ai-terraform-state-file/terraform-infra-provision/terraform-infra-provision.state; then
-                            aws s3 cp s3://ai-terraform-state-file/terraform-infra-provision/terraform-infra-provision.state terraform-infra-provision/terraform/terraform.tfstate
-                            echo "✅ tfstate downloaded"
-                        else
-                            echo "⚠️ No tfstate found. Proceeding without it."
-                        fi
-                    """
-                }
-            }
-        }
-
         stage('Terraform Init & Plan') {
             steps {
                 dir('terraform-infra-provision/terraform') {
