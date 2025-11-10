@@ -13,7 +13,7 @@ provider "aws" {
   region = "us-east-1"
 }
 
-# VPC with public subnets
+# VPC Module
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
   version = "~> 5.0"
@@ -37,7 +37,7 @@ module "alb_sg" {
   vpc_id  = module.vpc.vpc_id
 
   ingress_rules        = ["http-80-tcp"]
-  ingress_cidr_blocks  = ["10.0.1.43/32"]
+  ingress_cidr_blocks  = ["0.0.0.0/0"]
 }
 
 # Security Group for EC2
@@ -52,7 +52,7 @@ module "ec2_sg" {
   ingress_cidr_blocks  = ["0.0.0.0/0"]
 }
 
-# EC2 Instance
+# EC2 Instance Module
 module "app_server" {
   source  = "terraform-aws-modules/ec2-instance/aws"
   version = "~> 6.1.0"
@@ -73,41 +73,54 @@ module "app_server" {
               EOF
 }
 
-# Application Load Balancer
-module "app_lb" {
-  source  = "terraform-aws-modules/alb/aws"
-  version = "~> 10.2.0"
+# Native ALB Resources
 
+resource "aws_lb" "app" {
   name               = "app-load-balancer"
-  load_balancer_type = "application"
   internal           = false
-  subnets            = module.vpc.public_subnets
+  load_balancer_type = "application"
   security_groups    = [module.alb_sg.security_group_id]
+  subnets            = module.vpc.public_subnets
 
-  target_groups = {
-    app_tg = {
-      name_prefix      = "app-tg"
-      backend_protocol = "HTTP"
-      backend_port     = 80
-      target_type      = "instance"
-      vpc_id           = module.vpc.vpc_id
-      targets = {
-        app_server = {
-          target_id = module.app_server.id
-          port      = 80
-        }
-      }
-    }
+  tags = {
+    Name = "app-load-balancer"
+  }
+}
+
+resource "aws_lb_target_group" "app_tg" {
+  name_prefix = "app-tg"
+  port        = 80
+  protocol    = "HTTP"
+  target_type = "instance"
+  vpc_id      = module.vpc.vpc_id
+
+  health_check {
+    path                = "/"
+    protocol            = "HTTP"
+    interval            = 30
+    timeout             = 5
+    healthy_threshold   = 2
+    unhealthy_threshold = 2
   }
 
-  listeners = {
-    http = {
-      port     = 80
-      protocol = "HTTP"
-      default_action = [{
-        type             = "forward"
-        target_group_key = "app_tg"
-      }]
-    }
+  tags = {
+    Name = "app-tg"
+  }
+}
+
+resource "aws_lb_target_group_attachment" "app_server" {
+  target_group_arn = aws_lb_target_group.app_tg.arn
+  target_id        = module.app_server.id
+  port             = 80
+}
+
+resource "aws_lb_listener" "http" {
+  load_balancer_arn = aws_lb.app.arn
+  port              = 80
+  protocol          = "HTTP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.app_tg.arn
   }
 }
