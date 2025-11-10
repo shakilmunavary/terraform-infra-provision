@@ -84,6 +84,7 @@ pipeline {
         stage("Cleanup Vector DB") {
             steps {
                 sh """
+                    . venv/bin/activate
                     python3 ${SHARED_LIB_DIR}/delete_namespace.py \
                       --namespace ${REPO_NAME}-${BUILD_NUMBER}
                 """
