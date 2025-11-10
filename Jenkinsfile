@@ -5,7 +5,7 @@ pipeline {
 
     environment {
         WORKDIR = "${env.WORKSPACE}"
-        SHARED_LIB_DIR = "jenkins-shared-ai-lib"
+        SHARED_LIB_DIR = "${WORKDIR}/jenkins-shared-ai-lib"
         REPO_NAME = "terraform-infra-provision"
     }
 
