@@ -79,7 +79,7 @@ pipeline {
                     ]) {
                         sh """
                             echo "🧹 Cleaning Terraform workspace"
-                            rm -rf .terraform
+                            sudo rm -rf .terraform || rm -rf .terraform || echo '⚠️ .terraform cleanup skipped due to permissions'
                             chmod -R 775 .
 
                             echo "🚀 Running terraform init and plan"
