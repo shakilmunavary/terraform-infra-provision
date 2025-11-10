@@ -4,246 +4,96 @@ pipeline {
     agent any
 
     environment {
-        TF_BASE_DIR     = "/home/AI-SDP-PLATFORM/terra-analysis"
-        SHARED_LIB_REPO = "https://github.com/shakilmunavary/jenkins-shared-ai-lib.git"
-        SHARED_LIB_DIR  = "jenkins-shared-ai-lib"
+        WORKDIR = "${env.WORKSPACE}"
+        SHARED_LIB_DIR = "jenkins-shared-ai-lib"
+        REPO_NAME = "terraform-infra-provision"
     }
 
     stages {
-        stage('Initialize') {
+        stage("Terraform Init & Plan") {
             steps {
-                script {
-                    def repoUrl = env.GIT_URL ?: "https://github.com/shakilmunavary/terraform-ai-analytics.git"
-                    def repoName = repoUrl.tokenize('/').last().replace('.git', '')
-                    def workDir = "${env.TF_BASE_DIR}/${repoName}"
-
-                    env.REPO_NAME = repoName
-                    env.REPO_URL  = repoUrl
-                    env.WORKDIR   = workDir
-                    env.TF_STATE  = "${workDir}/terraform.tfstate"
-                }
-            }
-        }
-
-        stage('Clone Terraform Repo') {
-            steps {
-                sh """
-                    echo "📦 Cloning ${REPO_NAME} from ${REPO_URL}"
-                    rm -rf ${REPO_NAME}
-                    git clone ${REPO_URL}
-                    mkdir -p ${WORKDIR}
-                    cp -r ${REPO_NAME}/* ${WORKDIR}/
-                """
-            }
-        }
-
-        stage('Clone Shared AI Library') {
-            steps {
-                sh """
-                    echo "📦 Cloning Shared AI Library"
-                    rm -rf ${SHARED_LIB_DIR}
-                    git clone ${SHARED_LIB_REPO}
-                """
-            }
-        }
-
-        stage('Download Terraform State File from S3') {
-            steps {
-                withCredentials([
-                    string(credentialsId: 'aws-access-key-id', variable: 'AWS_ACCESS_KEY_ID'),
-                    string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY')
-                ]) {
-                    script {
-                        def s3Key = "${env.REPO_NAME}/${env.REPO_NAME}.state"
-                        def localPath = "${env.TF_STATE}"
-
-                        sh """
-                            echo "📥 Checking for tfstate file in S3..."
-                            if aws s3 ls s3://ai-terraform-state-file/${s3Key}; then
-                                aws s3 cp s3://ai-terraform-state-file/${s3Key} ${localPath}
-                                echo "✅ tfstate file downloaded to ${localPath}"
-                            else
-                                echo "⚠️ No tfstate file found in S3. Proceeding without it."
-                            fi
-                        """
-                    }
-                }
-            }
-        }
-
-        stage('Terraform Init & Plan') {
-            steps {
-                dir("${env.WORKDIR}") {
-                    withCredentials([
-                        string(credentialsId: 'INFRACOST_APIKEY', variable: 'INFRACOST_API_KEY')
-                    ]) {
-                        sh """
-                            cd terraform
-                            terraform init
-                            terraform plan -out=tfplan.binary
-                            terraform show -json tfplan.binary > tfplan.raw.json
-                            mv tfplan.json ../tfplan.json
-
-                            jq '
-                              .resource_changes |= sort_by(.address) |
-                              del(.resource_changes[].change.after_unknown) |
-                              del(.resource_changes[].change.before_sensitive) |
-                              del(.resource_changes[].change.after_sensitive) |
-                              del(.resource_changes[].change.after_identity) |
-                              del(.resource_changes[].change.before) |
-                              del(.resource_changes[].change.after.tags_all) |
-                              del(.resource_changes[].change.after.tags) |
-                              del(.resource_changes[].change.after.id) |
-                              del(.resource_changes[].change.after.arn) |
-                              del(.resource_changes[].change.after.region) |
-                              del(.resource_changes[].change.after.account_id)
-                            ' tfplan.raw.json > tfplan.json
-
-                            infracost configure set api_key \$INFRACOST_API_KEY
-                            infracost breakdown --path=tfplan.binary --format json --out-file totalcost.json
-                        """
-                    }
-                }
-            }
-        }
-
-        stage('Setup Python Virtualenv') {
-            steps {
-                sh """
-                    echo "🐍 Setting up Python virtual environment"
-                    python3 -m venv venv
-                    source venv/bin/activate
-                    pip install --upgrade pip
-                    pip install langchain langchain-community langchain-openai chromadb openai tiktoken
-
-                """
-            }
-        }
-
-        stage('Index to Vector DB') {
-            steps {
-                withCredentials([
-                    string(credentialsId: 'AZURE_API_KEY', variable: 'AZURE_API_KEY'),
-                    string(credentialsId: 'AZURE_API_BASE', variable: 'AZURE_API_BASE'),
-                    string(credentialsId: 'AZURE_DEPLOYMENT_NAME', variable: 'DEPLOYMENT_NAME'),
-                    string(credentialsId: 'AZURE_API_VERSION', variable: 'AZURE_API_VERSION')
-                ]) {
+                dir("${WORKDIR}/terraform") {
                     sh """
-                        echo "📦 Indexing Terraform code and guardrails into vector DB"
-                        source venv/bin/activate
-                        export AZURE_API_KEY=${AZURE_API_KEY}
-                        export AZURE_API_BASE=${AZURE_API_BASE}
-                        export DEPLOYMENT_NAME=${DEPLOYMENT_NAME}
-                        export AZURE_API_VERSION=${AZURE_API_VERSION}
-                        python3 ${SHARED_LIB_DIR}/indexer.py \
-                            --code_dir ${WORKDIR} \
-                            --guardrails ${SHARED_LIB_DIR}/guardrails_v1.txt \
-                            --namespace ${REPO_NAME}-${BUILD_NUMBER}
+                        terraform init
+                        terraform plan -out=tfplan.binary
+                        terraform show -json tfplan.binary > tfplan.raw.json
+                        jq '.planned_values.root_module.resources + (.planned_values.root_module.child_modules[]?.resources // [])' tfplan.raw.json > tfplan.json
+                        mv tfplan.json ../tfplan.json
                     """
                 }
             }
         }
 
-        stage('AI Analytics') {
+        stage("AI Analytics") {
             steps {
-                withCredentials([
-                    string(credentialsId: 'AZURE_API_KEY', variable: 'AZURE_API_KEY'),
-                    string(credentialsId: 'AZURE_API_BASE', variable: 'AZURE_API_BASE'),
-                    string(credentialsId: 'AZURE_DEPLOYMENT_NAME', variable: 'DEPLOYMENT_NAME'),
-                    string(credentialsId: 'AZURE_API_VERSION', variable: 'AZURE_API_VERSION')
-                ]) {
-                    script {
-                        def rcaContext = sh(
-                            script: """
-                                source venv/bin/activate
-                                export AZURE_API_KEY=${AZURE_API_KEY}
-                                export AZURE_API_BASE=${AZURE_API_BASE}
-                                export DEPLOYMENT_NAME=${DEPLOYMENT_NAME}
-                                export AZURE_API_VERSION=${AZURE_API_VERSION}
-                                python3 ${SHARED_LIB_DIR}/query.py \
-                                    --plan ${WORKDIR}/tfplan.json \
-                                    --namespace ${REPO_NAME}-${BUILD_NUMBER}
-                            """,
-                            returnStdout: true
-                        ).trim()
-
-                        writeFile file: "${WORKDIR}/rca.txt", text: rcaContext
-
-                        aiAnalytics(
-                            "${WORKDIR}/tfplan.json",
-                            "${SHARED_LIB_DIR}/guardrails_v1.txt",
-                            "${SHARED_LIB_DIR}/reference_terra_analysis_html.html",
-                            "${WORKDIR}/output.html",
-                            "${WORKDIR}/payload.json",
-                            AZURE_API_KEY,
-                            AZURE_API_BASE,
-                            DEPLOYMENT_NAME,
-                            AZURE_API_VERSION
-                        )
-                    }
-                }
+                aiAnalytics(
+                    workdir: "${WORKDIR}",
+                    sharedLibDir: "${SHARED_LIB_DIR}",
+                    repoName: "${REPO_NAME}",
+                    buildNumber: "${BUILD_NUMBER}"
+                )
             }
         }
 
-        stage('Publish AI Analysis Report') {
+        stage("Publish AI Analysis Report") {
             steps {
-                publishHTML([
-                    reportName: 'AI Analysis',
-                    reportDir: "${env.WORKDIR}",
+                publishHTML(target: [
+                    reportDir: "${WORKDIR}",
                     reportFiles: 'output.html',
-                    keepAll: true,
-                    allowMissing: false,
-                    alwaysLinkToLastBuild: true
+                    reportName: 'AI Analysis'
                 ])
             }
         }
 
-        stage('Evaluate Guardrail Coverage') {
+        stage("Evaluate Guardrail Coverage") {
             steps {
                 script {
-                    def coverageLine = sh(
-                        script: "grep -i 'Overall Guardrail Coverage' ${env.WORKDIR}/output.html | grep -o '[0-9]\\{1,3\\}%'",
+                    def coverage = sh(
+                        script: "grep -i 'Overall Guardrail Coverage' ${WORKDIR}/output.html | grep -o '[0-9]\\{1,3\\}%'",
                         returnStdout: true
                     ).trim()
 
-                    def coveragePercent = coverageLine.replace('%', '').toInteger()
-                    echo "🔍 Guardrail Coverage Detected: ${coveragePercent}%"
-
-                    if (coveragePercent >= 90) {
-                        currentBuild.description = "Auto-approved (Coverage: ${coveragePercent}%)"
-                        env.PIPELINE_DECISION = 'APPROVED'
-                    } else {
-                        currentBuild.description = "Auto-rejected (Coverage: ${coveragePercent}%)"
-                        env.PIPELINE_DECISION = 'REJECTED'
-                    }
+                    echo "🛡️ Guardrail Coverage: ${coverage}"
                 }
             }
         }
 
-        stage('Approve Stage') {
+        stage("Approve Stage") {
             when {
-                expression { env.PIPELINE_DECISION == 'APPROVED' }
+                expression {
+                    def coverage = sh(
+                        script: "grep -i 'Overall Guardrail Coverage' ${WORKDIR}/output.html | grep -o '[0-9]\\{1,3\\}%'",
+                        returnStdout: true
+                    ).trim().replace('%','').toInteger()
+                    return coverage >= 80
+                }
             }
             steps {
-                echo "✅ Pipeline approved. Proceeding with deployment or next steps..."
+                echo "✅ Guardrail coverage is sufficient. Proceeding to approval."
             }
         }
 
-        stage('Reject Stage') {
+        stage("Reject Stage") {
             when {
-                expression { env.PIPELINE_DECISION == 'REJECTED' }
+                expression {
+                    def coverage = sh(
+                        script: "grep -i 'Overall Guardrail Coverage' ${WORKDIR}/output.html | grep -o '[0-9]\\{1,3\\}%'",
+                        returnStdout: true
+                    ).trim().replace('%','').toInteger()
+                    return coverage < 80
+                }
             }
             steps {
-                echo "❌ Pipeline rejected. Halting further actions."
+                echo "❌ Guardrail coverage is insufficient. Rejecting deployment."
+                error("Deployment rejected due to low guardrail coverage.")
             }
         }
 
-        stage('Cleanup Vector DB') {
+        stage("Cleanup Vector DB") {
             steps {
                 sh """
-                    source venv/bin/activate
                     python3 ${SHARED_LIB_DIR}/delete_namespace.py \
-                        --namespace ${REPO_NAME}-${BUILD_NUMBER}
+                      --namespace ${REPO_NAME}-${BUILD_NUMBER}
                 """
             }
         }
