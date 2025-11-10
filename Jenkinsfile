@@ -26,12 +26,17 @@ pipeline {
 
         stage("AI Analytics") {
             steps {
-                aiAnalytics(
-                    workdir: "${WORKDIR}",
-                    sharedLibDir: "${SHARED_LIB_DIR}",
-                    repoName: "${REPO_NAME}",
-                    buildNumber: "${BUILD_NUMBER}"
-                )
+                withCredentials([
+                    string(credentialsId: 'azure-api-key', variable: 'AZURE_API_KEY'),
+                    string(credentialsId: 'azure-api-base', variable: 'AZURE_API_BASE')
+                ]) {
+                    aiAnalytics(
+                        workdir: "${WORKDIR}",
+                        sharedLibDir: "${SHARED_LIB_DIR}",
+                        repoName: "${REPO_NAME}",
+                        buildNumber: "${BUILD_NUMBER}"
+                    )
+                }
             }
         }
 
@@ -42,19 +47,6 @@ pipeline {
                     reportFiles: 'output.html',
                     reportName: 'AI Analysis'
                 ])
-            }
-        }
-
-        stage("Evaluate Guardrail Coverage") {
-            steps {
-                script {
-                    def coverage = sh(
-                        script: "grep -i 'Overall Guardrail Coverage' ${WORKDIR}/output.html | grep -o '[0-9]\\{1,3\\}%'",
-                        returnStdout: true
-                    ).trim()
-
-                    echo "🛡️ Guardrail Coverage: ${coverage}"
-                }
             }
         }
 
