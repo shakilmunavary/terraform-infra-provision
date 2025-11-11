@@ -6,7 +6,7 @@ pipeline {
     stage('AI Compliance') {
       steps {
         script {
-          aiPipeline(
+          aiAnalytics(
             terraformRepo: "https://github.com/shakilmunavary/terraform-infra-provision.git",
             folderName: "terraform"
           )
