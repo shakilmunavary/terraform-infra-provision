@@ -1,6 +1,4 @@
-@Library(value = 'jenkins-shared-ai-lib@main', changelog = false) _
-
-
+@Library(value = 'aiLib@main', changelog = false) _
 pipeline {
   agent any
   stages {
