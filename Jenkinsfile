@@ -1,4 +1,4 @@
-@Library('aiLib') _
+@Library('aiLib@main') _
 
 pipeline {
   agent any
