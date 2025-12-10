@@ -1,4 +1,4 @@
-@Library(value = 'aiLib@main', changelog = false) _
+@Library(value = 'ai-terra-analysis@main', changelog = false) _
 pipeline {
   agent any
   stages {
